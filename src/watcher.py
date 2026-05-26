@@ -55,6 +55,35 @@ def run_hook(script, event):
 
 log("watcher started")
 
+# Touch the TV once on startup so macOS triggers the "local network access"
+# permission dialog while the screen is on, rather than at first sleep when
+# the user can't see it.
+def warmup_tv_connection():
+    cfg = os.path.expanduser("~/.config/macsleep-lgtv/config.env")
+    tv_ip = ""
+    try:
+        for line in open(cfg):
+            if line.startswith("TV_IP="):
+                tv_ip = line.split("=", 1)[1].strip().strip('"')
+                break
+    except OSError:
+        return
+    if not tv_ip:
+        return
+    bscpylgtvcommand = os.path.expanduser("~/.local/bin/bscpylgtvcommand")
+    if not os.path.exists(bscpylgtvcommand):
+        return
+    log(f"warmup: connecting to TV at {tv_ip}")
+    try:
+        subprocess.run(
+            [bscpylgtvcommand, tv_ip, "get_software_info"],
+            capture_output=True, timeout=10
+        )
+    except Exception as e:
+        log(f"warmup failed (non-fatal): {e}")
+
+warmup_tv_connection()
+
 displays_asleep = False
 
 while True:
