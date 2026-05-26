@@ -51,7 +51,7 @@ fi
 say "Installing shell hooks"
 install -m 755 "$REPO_DIR/src/lgtv-off.sh" "$SHARE_DIR/lgtv-off.sh"
 install -m 755 "$REPO_DIR/src/lgtv-on.sh"  "$SHARE_DIR/lgtv-on.sh"
-install -m 755 "$REPO_DIR/src/watcher.sh"   "$WATCHER"
+install -m 755 "$REPO_DIR/src/watcher.py"   "$WATCHER"
 
 source "$CONFIG_FILE"
 KEY_FILE="${KEY_FILE/#\$HOME/$HOME}"
@@ -64,7 +64,9 @@ else
 fi
 
 say "Installing launchd agent"
-sed -e "s|__WATCHER_BIN__|$WATCHER|g" \
+PYTHON_BIN="$(command -v python3)"
+sed -e "s|__PYTHON_BIN__|$PYTHON_BIN|g" \
+    -e "s|__WATCHER_BIN__|$WATCHER|g" \
     -e "s|__LOG__|$LOG|g" \
     "$REPO_DIR/launchd/com.user.macsleep-lgtv.plist.template" > "$PLIST"
 
