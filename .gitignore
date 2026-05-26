@@ -1,0 +1,8 @@
+# compiled binary
+src/*.o
+
+# installed watcher
+*.watcher
+
+# personal config (never commit real IPs/MACs)
+config.env
