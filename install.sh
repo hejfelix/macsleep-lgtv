@@ -74,12 +74,26 @@ launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
 
 # Trigger the macOS "discover devices on local network" permission dialog now,
-# during install, so it doesn't silently block the first real sleep event.
+# using the exact python3 binary that the daemon will run as — so the right
+# entry appears in System Settings → Privacy & Security → Local Network.
 say "Testing TV connection — approve 'local network access' if a dialog appears"
-if "$BIN_DIR/bscpylgtvcommand" "$TV_IP" sw_info >/dev/null 2>&1; then
+if "$PYTHON_BIN" -c "
+import socket, sys
+try:
+    s = socket.socket()
+    s.settimeout(3)
+    s.connect(('$TV_IP', 3000))
+    s.close()
+    sys.exit(0)
+except Exception:
+    sys.exit(1)
+" 2>/dev/null; then
   say "TV reachable ✓"
 else
-  printf '\033[1;33m  Warning: could not reach TV at %s.\n  If a permission dialog appeared, approve it, then run install.sh again\n  to confirm connectivity.\033[0m\n' "$TV_IP"
+  printf '\033[1;33m  Warning: could not reach TV at %s on port 3000.\n' "$TV_IP"
+  printf '  • If a permission dialog appeared: approve it, then re-run install.sh\n'
+  printf '  • If already denied in System Settings → Privacy & Security → Local Network:\n'
+  printf '    enable the toggle for python3 / macsleep-lgtv-watcher, then re-run install.sh\033[0m\n'
 fi
 
 say "Done!"
