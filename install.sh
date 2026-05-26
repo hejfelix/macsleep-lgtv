@@ -10,12 +10,11 @@ LAUNCH_DIR="$HOME/Library/LaunchAgents"
 PLIST="$LAUNCH_DIR/com.user.macsleep-lgtv.plist"
 LOG="$HOME/Library/Logs/macsleep-lgtv.log"
 LABEL="com.user.macsleep-lgtv"
+WATCHER="$BIN_DIR/macsleep-lgtv-watcher"
 
 say() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 err() { printf '\033[1;31m!!\033[0m %s\n' "$*" >&2; }
 
-command -v swiftc >/dev/null \
-  || { err "swiftc not found — install Xcode CLT: xcode-select --install"; exit 1; }
 command -v brew >/dev/null \
   || { err "Homebrew required — see https://brew.sh"; exit 1; }
 
@@ -37,13 +36,13 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
   read -rp "  TV MAC address (e.g. F4:14:BF:B7:FE:52): " TV_MAC
   read -rp "  HDMI input to restore on wake [HDMI_1]: " TV_INPUT
   TV_INPUT="${TV_INPUT:-HDMI_1}"
-  cat > "$CONFIG_FILE" <<EOF
+  cat > "$CONFIG_FILE" <<CONF
 TV_IP="$TV_IP"
 TV_MAC="$TV_MAC"
 TV_INPUT="$TV_INPUT"
 KEY_FILE="\$HOME/.aiopylgtv.sqlite"
 DEBOUNCE_SECONDS=10
-EOF
+CONF
   chmod 600 "$CONFIG_FILE"
 else
   say "Using existing config: $CONFIG_FILE"
@@ -52,9 +51,7 @@ fi
 say "Installing shell hooks"
 install -m 755 "$REPO_DIR/src/lgtv-off.sh" "$SHARE_DIR/lgtv-off.sh"
 install -m 755 "$REPO_DIR/src/lgtv-on.sh"  "$SHARE_DIR/lgtv-on.sh"
-
-say "Compiling watcher"
-swiftc -O "$REPO_DIR/src/screen-sleep-watcher.swift" -o "$BIN_DIR/macsleep-lgtv-watcher"
+install -m 755 "$REPO_DIR/src/watcher.sh"   "$WATCHER"
 
 source "$CONFIG_FILE"
 KEY_FILE="${KEY_FILE/#\$HOME/$HOME}"
@@ -67,7 +64,7 @@ else
 fi
 
 say "Installing launchd agent"
-sed -e "s|__WATCHER_BIN__|$BIN_DIR/macsleep-lgtv-watcher|g" \
+sed -e "s|__WATCHER_BIN__|$WATCHER|g" \
     -e "s|__LOG__|$LOG|g" \
     "$REPO_DIR/launchd/com.user.macsleep-lgtv.plist.template" > "$PLIST"
 
