@@ -4,7 +4,7 @@ Display and system sleep/wake watcher.
 Uses CGDisplayIsAsleep (CoreGraphics via ctypes) for reliable display sleep
 detection on Apple Silicon — the same API as the previous Swift implementation.
 """
-import ctypes, ctypes.util, os, socket, subprocess, sys, time, syslog
+import ctypes, ctypes.util, os, subprocess, sys, time, syslog
 
 SHARE_DIR = os.path.expanduser("~/.local/share/macsleep-lgtv")
 POLL_INTERVAL = 5  # seconds
@@ -12,22 +12,27 @@ POLL_INTERVAL = 5  # seconds
 # --test: triggered by install.sh to force the macOS local network permission
 # dialog for this binary before the daemon ever needs it at sleep time.
 if "--test" in sys.argv:
-    tv_ip = os.environ.get("TV_IP", "")
-    if not tv_ip:
-        cfg = os.path.expanduser("~/.config/macsleep-lgtv/config.env")
-        for line in open(cfg):
-            if line.startswith("TV_IP="):
-                tv_ip = line.split("=", 1)[1].strip().strip('"')
-    try:
-        s = socket.socket()
-        s.settimeout(3)
-        s.connect((tv_ip, 3000))
-        s.close()
+    cfg = os.path.expanduser("~/.config/macsleep-lgtv/config.env")
+    tv_ip = ""
+    bscpylgtvcommand = os.path.expanduser("~/.local/bin/bscpylgtvcommand")
+    for line in open(cfg):
+        if line.startswith("TV_IP="):
+            tv_ip = line.split("=", 1)[1].strip().strip('"')
+    # Run bscpylgtvcommand as a subprocess of this process — macOS checks the
+    # calling process chain, so this triggers the permission dialog for
+    # macsleep-lgtv-watcher, which is the binary that runs at sleep time.
+    result = subprocess.run(
+        [bscpylgtvcommand, tv_ip, "get_software_info"],
+        capture_output=True, text=True
+    )
+    conn_errors = ("No route to host", "Connection refused", "timed out", "Network is unreachable")
+    if any(e in result.stderr for e in conn_errors):
+        print(f"Could not reach TV at {tv_ip}", file=sys.stderr)
+        print(result.stderr.strip(), file=sys.stderr)
+        sys.exit(1)
+    else:
         print("TV reachable ✓")
         sys.exit(0)
-    except Exception as e:
-        print(f"Could not reach TV at {tv_ip}: {e}", file=sys.stderr)
-        sys.exit(1)
 
 SHARE_DIR = os.path.expanduser("~/.local/share/macsleep-lgtv")
 POLL_INTERVAL = 5  # seconds
