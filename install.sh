@@ -73,6 +73,15 @@ sed -e "s|__PYTHON_BIN__|$PYTHON_BIN|g" \
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
 
+# Trigger the macOS "discover devices on local network" permission dialog now,
+# during install, so it doesn't silently block the first real sleep event.
+say "Testing TV connection — approve 'local network access' if a dialog appears"
+if "$BIN_DIR/bscpylgtvcommand" "$TV_IP" sw_info >/dev/null 2>&1; then
+  say "TV reachable ✓"
+else
+  printf '\033[1;33m  Warning: could not reach TV at %s.\n  If a permission dialog appeared, approve it, then run install.sh again\n  to confirm connectivity.\033[0m\n' "$TV_IP"
+fi
+
 say "Done!"
 printf '\n  Logs:    tail -f %s\n  Config:  %s\n  Reload:  launchctl kickstart -k gui/%s/%s\n\n' \
   "$LOG" "$CONFIG_FILE" "$(id -u)" "$LABEL"
