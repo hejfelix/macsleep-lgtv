@@ -73,18 +73,17 @@ sed -e "s|__PYTHON_BIN__|$PYTHON_BIN|g" \
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
 
-# Trigger the macOS "discover devices on local network" permission dialog now,
-# by running the watcher itself — macOS tracks permission by executable name,
-# so this must be the same binary the daemon uses at runtime.
-say "Testing TV connection — approve 'local network access' if a dialog appears"
+# Verify the watcher can reach the TV at all.
+say "Testing TV connection"
 if "$PYTHON_BIN" "$WATCHER" --test; then
   say "TV reachable ✓"
 else
   printf '\033[1;33m  Warning: could not reach TV at %s.\n' "$TV_IP"
-  printf '  • If a permission dialog appeared: approve it, then re-run install.sh\n'
-  printf '  • If already denied: System Settings → Privacy & Security → Local Network\n'
-  printf '    → enable the toggle for macsleep-lgtv-watcher, then re-run install.sh\033[0m\n'
+  printf '  Check that the TV is on and the IP is correct in %s\033[0m\n' "$CONFIG_FILE"
 fi
+
+printf '\033[1;33m\n  Note: on first sleep, macOS may show a "local network access" dialog.\n'
+printf '  Approve it — the TV will power off correctly on the next sleep.\033[0m\n'
 
 say "Done!"
 printf '\n  Logs:    tail -f %s\n  Config:  %s\n  Reload:  launchctl kickstart -k gui/%s/%s\n\n' \
