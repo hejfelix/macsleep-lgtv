@@ -61,24 +61,32 @@ log("watcher started")
 def warmup_tv_connection():
     cfg = os.path.expanduser("~/.config/macsleep-lgtv/config.env")
     tv_ip = ""
+    key_file = ""
     try:
         for line in open(cfg):
             if line.startswith("TV_IP="):
                 tv_ip = line.split("=", 1)[1].strip().strip('"')
-                break
+            elif line.startswith("KEY_FILE="):
+                key_file = line.split("=", 1)[1].strip().strip('"')
     except OSError:
         return
     if not tv_ip:
         return
+    key_file = os.path.expandvars(key_file or "$HOME/.aiopylgtv.sqlite")
     bscpylgtvcommand = os.path.expanduser("~/.local/bin/bscpylgtvcommand")
     if not os.path.exists(bscpylgtvcommand):
         return
     log(f"warmup: connecting to TV at {tv_ip}")
     try:
-        subprocess.run(
-            [bscpylgtvcommand, tv_ip, "get_software_info"],
-            capture_output=True, timeout=10
+        r = subprocess.run(
+            [bscpylgtvcommand, "-p", key_file, tv_ip, "get_software_info"],
+            capture_output=True, text=True, timeout=10
         )
+        if r.returncode == 0:
+            log("warmup: ok")
+        else:
+            err = (r.stderr or "").strip().splitlines()[-1] if r.stderr else "no stderr"
+            log(f"warmup: rc={r.returncode} {err}")
     except Exception as e:
         log(f"warmup failed (non-fatal): {e}")
 
