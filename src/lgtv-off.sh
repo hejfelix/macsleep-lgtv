@@ -22,4 +22,12 @@ touch "$LOCK"
 
 BSCPY="$(command -v bscpylgtvcommand 2>/dev/null || true)"
 : "${BSCPY:=$HOME/.local/bin/bscpylgtvcommand}"
-"$BSCPY" -p "$KEY_FILE" "$TV_IP" power_off && echo "powered off" || echo "power_off failed"
+
+for i in {1..3}; do
+  if "$BSCPY" -p "$KEY_FILE" "$TV_IP" power_off 2>&1; then
+    echo "powered off"
+    exit 0
+  fi
+  (( i < 3 )) && sleep 1
+done
+echo "power_off failed after 3 attempts"
