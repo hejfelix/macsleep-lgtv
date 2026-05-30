@@ -49,9 +49,14 @@ The installer will:
 TV_IP="192.168.0.134"
 TV_MAC="F4:14:BF:B7:FE:52"
 TV_INPUT="HDMI_1"
+TV_DISPLAY_NAME="LG TV"
 KEY_FILE="$HOME/.aiopylgtv.sqlite"
 DEBOUNCE_SECONDS=10
 ```
+
+| Variable | Description |
+|---|---|
+| `TV_DISPLAY_NAME` | Substring of the display name reported by macOS (see `system_profiler SPDisplaysDataType`). Only act when this display is connected. Default `"LG TV"` matches all LG TVs. Set to `""` to match any HDMI/Television display. |
 
 After editing, reload:
 
@@ -97,6 +102,11 @@ Accept the prompt on the TV, then try again.
 WoL directly: `wakeonlan F4:14:BF:B7:FE:52`.
 
 **Duplicate events** — raise `DEBOUNCE_SECONDS` in config.
+
+**TV controlled when a different monitor is connected** — set
+`TV_DISPLAY_NAME` to match your TV's name as shown by
+`system_profiler SPDisplaysDataType` (e.g. `"LG TV SSCR2"`). The default
+`"LG TV"` matches any LG TV.
 
 ## License
 

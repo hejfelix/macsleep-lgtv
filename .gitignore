@@ -7,3 +7,4 @@ src/*.o
 # personal config (never commit real IPs/MACs)
 config.env
 .aiopylgtv.sqlite
+.vscode/settings.json

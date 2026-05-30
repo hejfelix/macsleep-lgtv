@@ -10,6 +10,21 @@ TRIGGER="${1:-wake}"
 exec >>"$LOG" 2>&1
 echo "--- $(date '+%F %T') on ($TRIGGER) ---"
 
+# Bail out if the expected TV display is not connected
+SP_DISPLAYS=$(/usr/sbin/system_profiler SPDisplaysDataType 2>/dev/null)
+if [[ -n "${TV_DISPLAY_NAME:-}" ]]; then
+  if ! echo "$SP_DISPLAYS" | grep -q "$TV_DISPLAY_NAME"; then
+    echo "'$TV_DISPLAY_NAME' not found in connected displays — skipping"
+    exit 0
+  fi
+else
+  # Fallback: require any HDMI connection or Television marker
+  if ! echo "$SP_DISPLAYS" | grep -qE "Connection Type.*HDMI|Television: Yes"; then
+    echo "no HDMI/TV display connected — skipping"
+    exit 0
+  fi
+fi
+
 WOL="$(command -v wakeonlan 2>/dev/null || true)"
 : "${WOL:=/opt/homebrew/bin/wakeonlan}"
 BSCPY="$(command -v bscpylgtvcommand 2>/dev/null || true)"
