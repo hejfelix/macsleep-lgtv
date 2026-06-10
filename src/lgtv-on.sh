@@ -13,7 +13,7 @@ echo "--- $(date '+%F %T') on ($TRIGGER) ---"
 # Bail out if the expected TV display is not connected
 SP_DISPLAYS=$(/usr/sbin/system_profiler SPDisplaysDataType 2>/dev/null)
 if [[ -n "${TV_DISPLAY_NAME:-}" ]]; then
-  if ! echo "$SP_DISPLAYS" | grep -q "$TV_DISPLAY_NAME"; then
+  if ! echo "$SP_DISPLAYS" | grep -Fq "$TV_DISPLAY_NAME"; then
     echo "'$TV_DISPLAY_NAME' not found in connected displays — skipping"
     exit 0
   fi
