@@ -46,10 +46,26 @@ _cg = ctypes.CDLL(ctypes.util.find_library("CoreGraphics"))
 _cg.CGMainDisplayID.restype = ctypes.c_uint32
 _cg.CGDisplayIsAsleep.restype = ctypes.c_bool
 _cg.CGDisplayIsAsleep.argtypes = [ctypes.c_uint32]
+_cg.CGGetOnlineDisplayList.restype = ctypes.c_int32  # CGError
+_cg.CGGetOnlineDisplayList.argtypes = [
+    ctypes.c_uint32,
+    ctypes.POINTER(ctypes.c_uint32),
+    ctypes.POINTER(ctypes.c_uint32),
+]
 
 
 def display_is_asleep():
     return _cg.CGDisplayIsAsleep(_cg.CGMainDisplayID())
+
+
+def online_display_ids():
+    """Set of display IDs currently connected (online), powered on or not."""
+    max_displays = 16
+    arr = (ctypes.c_uint32 * max_displays)()
+    count = ctypes.c_uint32(0)
+    if _cg.CGGetOnlineDisplayList(max_displays, arr, ctypes.byref(count)) != 0:
+        return set()
+    return {arr[i] for i in range(count.value)}
 
 
 def log(msg):
@@ -106,16 +122,29 @@ def warmup_tv_connection():
 warmup_tv_connection()
 
 displays_asleep = False
+known_displays = online_display_ids()
 
 while True:
     before = time.monotonic()
     time.sleep(POLL_INTERVAL)
     after = time.monotonic()
 
+    current_displays = online_display_ids()
+    new_displays = current_displays - known_displays
+    known_displays = current_displays
+
     # Gap >> POLL_INTERVAL means system was suspended
     if (after - before) > POLL_INTERVAL * 3:
         log("didWake (system)")
         run_hook("lgtv-on.sh", "wake")
+        displays_asleep = False
+        continue
+
+    # A new display was connected (e.g. HDMI cable plugged in after wake).
+    # lgtv-on.sh guards on TV_DISPLAY_NAME, so it no-ops for non-TV displays.
+    if new_displays:
+        log(f"displayDidConnect ({len(new_displays)} new)")
+        run_hook("lgtv-on.sh", "displayconnect")
         displays_asleep = False
         continue
 
